@@ -1,12 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // The editor core
-import {
-  Card,
-  CardHeader,
-  CardMedia,
-  CardContent,
-  Typography,
-} from '@mui/material';
+import { Card, CardContent, CardHeader, Typography } from '@mui/material';
 import type { Record as RecordType } from 'ra-core';
 import type { CellPlugin } from '@react-page/editor';
 import slate, {
@@ -19,7 +13,6 @@ import {
 } from '@react-page/react-admin';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import fakeDataProvider from 'ra-data-fakerest';
 import React, { useEffect, useState } from 'react';
 import {
   Create,
@@ -32,15 +25,13 @@ import {
   SimpleForm,
   TextField,
   TextInput,
-  ImageField,
 } from 'react-admin';
 import { cellPlugins } from '../../plugins/cellPlugins';
-import { demo } from '../../sampleContents/demo';
-import { raAboutUs } from '../../sampleContents/raAboutUs';
 import {
   createGenerateClassName,
   StylesProvider,
 } from '@material-ui/core/styles';
+import dataProvider from '../../providers/DataProvider';
 
 const generateClassName = createGenerateClassName({
   // By enabling this option, if you have non-MUI elements (e.g. `<div />`)
@@ -56,70 +47,39 @@ const Admin = dynamic(async () => (await import('react-admin')).Admin, {
   ssr: false,
 });
 
-// this is a fake dataprovider. Normally you woul use your own data-provider (rest, graphql, etc.)
-const dataProvider = fakeDataProvider({
-  posts: [
-    { id: 'post1', title: 'About us', content: raAboutUs },
-    { id: 'post2', title: 'An empty post' },
-    { id: 'post3', title: 'Demo!', content: demo },
-  ],
-  products: [
-    {
-      id: 'product1',
-      title: 'A Fancy Chair!',
-      imageUrl: 'https://picsum.photos/seed/react-page/800/600',
-      teaserText:
-        'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.',
-    },
-    {
-      id: 'product2',
-      title: 'Some miracelous table',
-      imageUrl: 'https://picsum.photos/seed/react-page-is-awesome/800/600',
-      teaserText:
-        'At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua',
-    },
-    {
-      id: 'product3',
-      title: 'Fantastic closet',
-      imageUrl: 'https://picsum.photos/seed/react-admin-as-well/800/600',
-      teaserText:
-        'Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua',
-    },
-  ],
-});
-
 /**
  * This is an example of a slate link plugin that uses react admin to select the target
  */
-const PostIdSelector = (props: any) => (
+const PageIdSelector = (props: any) => (
   // pass the props
   <RaSelectReferenceInputField
-    optionText="title"
-    reference="posts"
-    label="Post"
     {...props}
+    optionText="title"
+    reference="pages"
+    label="Page"
   />
 );
-const postLinkPlugin = pluginFactories.createComponentPlugin<{
-  postId: string;
+
+const pageLinkPlugin = pluginFactories.createComponentPlugin<{
+  pageId: string;
 }>({
-  icon: <span>Post</span>,
-  type: 'postlink',
+  icon: <span>Page</span>,
+  type: 'pagelink',
   object: 'mark',
-  label: 'Post link',
+  label: 'Page link',
   addHoverButton: true,
   addToolbarButton: true,
   controls: {
     type: 'autoform',
     schema: {
-      required: ['postId'],
+      required: ['pageId'],
       type: 'object',
       properties: {
-        postId: {
+        pageId: {
           type: 'string',
           uniforms: {
             // you should lazy load this
-            component: PostIdSelector,
+            component: PageIdSelector,
           },
         },
       },
@@ -129,7 +89,7 @@ const postLinkPlugin = pluginFactories.createComponentPlugin<{
   // and you would probably read more data from your datasource
   // this is just a simple example. The link does actually not work in our example, but you should get the idea
   Component: (props) => (
-    <Link href={'/posts/' + props.postId}>
+    <Link href={'/pages/' + props.pageId}>
       <a>{props.children}</a>
     </Link>
   ),
@@ -142,7 +102,7 @@ const customSlate = slate((def) => ({
     ...def.plugins,
     link: {
       ...def.plugins.link,
-      postLink: postLinkPlugin,
+      // pageLink: pageLinkPlugin,
     },
   },
 }));
@@ -164,20 +124,17 @@ const ProductTeaser: React.FC<{ productId: string }> = ({ productId }) => {
   const [product, setProduct] = useState<RecordType | null>(null);
   useEffect(() => {
     dataProvider
-      .getOne('products', { id: productId })
-      .then((r) => setProduct(r.data));
+      .getOne('Page', { id: productId })
+      .then((r) =>
+        setProduct({ ...r.data.record.params, id: r.data.record.params._id })
+      );
   }, [productId]);
   return product ? (
     <Card>
-      <CardMedia
-        image={product.imageUrl}
-        title={product.title}
-        style={{ height: 240 }}
-      />
       <CardHeader title={product.title} />
       <CardContent>
         <Typography variant="body2" color="textSecondary" component="p">
-          {product.teaserText}
+          {product.content}
         </Typography>
       </CardContent>
     </Card>
@@ -248,7 +205,44 @@ const PostList = (props: any) => {
   );
 };
 
-export const PostEdit = (props: any) => (
+export const PostCreate = (props: any) => (
+  <Create title="Create a Post" {...props}>
+    <SimpleForm label="summary">
+      <TextInput source="id" />
+      <TextInput source="title" />
+    </SimpleForm>
+  </Create>
+);
+
+const posts = {
+  list: PostList,
+  create: PostCreate,
+  // edit: PostEdit,
+};
+
+const PageList = (props: any) => {
+  return (
+    <List {...props}>
+      <Datagrid>
+        <TextField source="id" />
+        <TextField source="title" />
+        <EditButton />
+        <ShowButton />
+      </Datagrid>
+    </List>
+  );
+};
+
+export const PageCreate = (props: any) => (
+  <Create title="Create a Product" {...props}>
+    <SimpleForm label="summary">
+      <TextInput source="title" />
+      <TextInput multiline source="content" />
+    </SimpleForm>
+  </Create>
+);
+
+export const PageEdit = (props: any) => (
   <Edit title="Edit a Post" {...props}>
     <SimpleForm label="summary">
       <TextInput disabled source="id" />
@@ -262,69 +256,18 @@ export const PostEdit = (props: any) => (
   </Edit>
 );
 
-export const PostCreate = (props: any) => (
-  <Create title="Create a Post" {...props}>
-    <SimpleForm label="summary">
-      <TextInput source="id" />
-      <TextInput source="title" />
-    </SimpleForm>
-  </Create>
-);
-
-const posts = {
-  list: PostList,
-  create: PostCreate,
-  edit: PostEdit,
-};
-
-const ProductList = (props: any) => {
-  return (
-    <List {...props}>
-      <Datagrid>
-        <TextField source="id" />
-        <TextField source="title" />
-        <ImageField source="imageUrl" />
-        <EditButton />
-        <ShowButton />
-      </Datagrid>
-    </List>
-  );
-};
-
-export const ProductEdit = (props: any) => (
-  <Edit title="Edit a Product" {...props}>
-    <SimpleForm label="summary">
-      <TextInput disabled source="id" />
-      <TextInput source="title" />
-      <TextInput multiline source="teaserText" />
-      <TextInput source="imageUrl" />
-    </SimpleForm>
-  </Edit>
-);
-
-export const ProductCreate = (props: any) => (
-  <Create title="Create a Product" {...props}>
-    <SimpleForm label="summary">
-      <TextInput source="id" />
-      <TextInput source="title" />
-      <TextInput multiline source="teaserText" />
-      <TextInput source="imageUrl" />
-    </SimpleForm>
-  </Create>
-);
-
-const products = {
-  list: ProductList,
-  create: ProductCreate,
-  edit: ProductEdit,
+const pages = {
+  list: PageList,
+  create: PageCreate,
+  edit: PageEdit,
 };
 
 export default function ReactAdminExample() {
   return (
     <StylesProvider generateClassName={generateClassName}>
-      <Admin dataProvider={dataProvider} title="Example Admin">
-        <Resource name="posts" {...posts} />
-        <Resource name="products" {...products} />
+      <Admin dataProvider={dataProvider} title="Constructor Admin">
+        {/*<Resource name="posts" {...posts} />*/}
+        <Resource name="Page" {...pages} />
       </Admin>
     </StylesProvider>
   );
