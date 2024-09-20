@@ -1,13 +1,31 @@
-import Editor from '@react-page/editor';
+import Editor, { ValueWithLegacy } from '@react-page/editor';
 import React from 'react';
-import PageLayout from '../components/PageLayout';
 import { cellPlugins } from '../plugins/cellPlugins';
-import { demo } from '../sampleContents/demo';
+import pako from 'pako';
 
-export default function ReadOnly() {
+export const getServerSideProps = async () => {
+  const response = await fetch(
+    'http://localhost:3333/admin/api/resources/Page/records/7/show',
+    {
+      method: 'GET',
+      headers: {
+        'x-api-key': 'test',
+      },
+    }
+  );
+  const data = await response.json();
+  const uint = new Uint8Array(
+    data.record.params.content.split(',').map(Number)
+  );
+  const str = new TextDecoder().decode(pako.ungzip(uint));
+
+  return { props: { content: JSON.parse(str) } };
+};
+
+export default function ReadOnly({ content }: { content: ValueWithLegacy }) {
   return (
-    <PageLayout>
-      <Editor cellPlugins={cellPlugins} value={demo} lang="en" readOnly />
-    </PageLayout>
+    <>
+      <Editor cellPlugins={cellPlugins} value={content} lang="en" readOnly />
+    </>
   );
 }

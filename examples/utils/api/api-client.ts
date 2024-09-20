@@ -186,6 +186,7 @@ class ApiClient {
     options: RecordActionAPIParams
   ): Promise<AxiosResponse<RecordActionResponse>> {
     const { resourceId, recordId, actionName, data, ...axiosParams } = options;
+    console.log('presend', data);
     const response = await this.client.request({
       url: `/api/resources/${resourceId}/records/${recordId}/${actionName}`,
       method: data || actionName === 'delete' ? 'POST' : 'GET',

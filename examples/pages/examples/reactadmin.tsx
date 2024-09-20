@@ -3,10 +3,7 @@
 import { Card, CardContent, CardHeader, Typography } from '@mui/material';
 import type { Record as RecordType } from 'ra-core';
 import type { CellPlugin } from '@react-page/editor';
-import slate, {
-  DEFAULT_SLATE_PLUGIN_ID,
-  pluginFactories,
-} from '@react-page/plugins-slate';
+import slate, { pluginFactories } from '@react-page/plugins-slate';
 import {
   RaReactPageInput,
   RaSelectReferenceInputField,
@@ -187,9 +184,9 @@ const recommendedProducts: CellPlugin<{
   },
 };
 const ourCellPlugins = [
-  customSlate,
+  // customSlate,
   recommendedProducts,
-  ...cellPlugins.filter((p) => p.id !== DEFAULT_SLATE_PLUGIN_ID),
+  ...cellPlugins,
 ];
 
 const PostList = (props: any) => {

@@ -1,6 +1,7 @@
 import { stringify } from 'qs';
 import { DataProvider } from 'react-admin';
 import ApiClient from '../utils/api/api-client';
+import pako from 'pako';
 
 const API_DOMAIN = 'http://localhost:3333/admin';
 const API_KEY = 'test';
@@ -32,8 +33,20 @@ const dataProvider: DataProvider = {
       recordId: params.id,
       actionName: 'show',
     });
+    const uint = new Uint8Array(
+      data.record.params.content.split(',').map(Number)
+    );
+    const str = new TextDecoder().decode(pako.ungzip(uint));
     return {
-      data: data.record.params as any,
+      data: {
+        ...data.record.params,
+        ...(data.record.params.content
+          ? {
+              content: JSON.parse(str),
+              // content: JSON.parse(data.record.params.content),
+            }
+          : {}),
+      } as any,
     };
   },
   getMany: async (resource: any, params: any) => {
@@ -78,7 +91,19 @@ const dataProvider: DataProvider = {
       resourceId: resource,
       actionName: 'new',
       method: 'POST',
-      data: params.data,
+      data: {
+        ...params.data,
+        ...(params.data.content
+          ? {
+              content: pako
+                .gzip(JSON.stringify(params.data.content))
+                .toString(),
+            }
+          : {}),
+        headers: {
+          'content-encoding': 'gzip',
+        },
+      },
     });
     return {
       data: data.record.params,
@@ -86,11 +111,22 @@ const dataProvider: DataProvider = {
   },
 
   update: async (resource, params) => {
+    console.log(
+      new TextDecoder().decode(pako.gzip(JSON.stringify(params.data.content)))
+    );
     const { data } = await api.recordAction({
       resourceId: resource,
       recordId: params.id.toString(),
       actionName: 'edit',
-      data: params.data,
+      data: params.data.content
+        ? {
+            ...params.data,
+            content: pako.gzip(JSON.stringify(params.data.content)).toString(),
+          }
+        : params.data,
+      headers: {
+        'content-encoding': 'gzip',
+      },
     });
     return { data: data.record.params as any };
   },
