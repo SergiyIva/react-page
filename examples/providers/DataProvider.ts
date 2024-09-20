@@ -1,14 +1,14 @@
 import { stringify } from 'qs';
 import { DataProvider } from 'react-admin';
 import ApiClient from '../utils/api/api-client';
-import pako from 'pako';
+import { compress, decompress } from '../utils/compressor';
 
 const API_DOMAIN = 'http://localhost:3333/admin';
 const API_KEY = 'test';
 const api = new ApiClient(API_DOMAIN, API_KEY);
 
 const dataProvider: DataProvider = {
-  getList: async (resource: any, params: any) => {
+  getList: async (resource, params) => {
     const { field, order } = params.sort;
     const search = stringify(
       { ...params.pagination, sortBy: field, direction: order.toLowerCase() },
@@ -27,53 +27,44 @@ const dataProvider: DataProvider = {
     };
   },
 
-  getOne: async (resource: any, params: any) => {
+  getOne: async (resource, params) => {
     const { data } = await api.recordAction({
       resourceId: resource,
-      recordId: params.id,
+      recordId: params.id.toString(),
       actionName: 'show',
     });
-    const uint = new Uint8Array(
-      data.record.params.content.split(',').map(Number)
-    );
-    const str = new TextDecoder().decode(pako.ungzip(uint));
     return {
       data: {
         ...data.record.params,
         ...(data.record.params.content
           ? {
-              content: JSON.parse(str),
-              // content: JSON.parse(data.record.params.content),
+              content: decompress(data.record.params.content),
             }
           : {}),
       } as any,
     };
   },
-  getMany: async (resource: any, params: any) => {
-    const { field, order } = params.sort;
-    const search = stringify(
-      { ...params.pagination, sortBy: field, direction: order.toLowerCase() },
-      { addQueryPrefix: true }
-    );
 
-    const { data } = await api.resourceAction({
+  getMany: async (resource, params) => {
+    const recordIds = params.ids.map(String);
+    const { data } = await api.bulkAction({
       resourceId: resource,
       actionName: 'list',
       method: 'GET',
-      search,
+      recordIds,
     });
     return {
-      data: data.records,
+      data: data.records as any,
       total: data.meta.total,
     };
   },
+
   getManyReference: async (resource, params) => {
     const { field, order } = params.sort;
     const search = stringify(
       { ...params.pagination, sortBy: field, direction: order.toLowerCase() },
       { addQueryPrefix: true }
     );
-
     const { data } = await api.resourceAction({
       resourceId: resource,
       actionName: 'list',
@@ -95,14 +86,9 @@ const dataProvider: DataProvider = {
         ...params.data,
         ...(params.data.content
           ? {
-              content: pako
-                .gzip(JSON.stringify(params.data.content))
-                .toString(),
+              content: compress(params.data.content),
             }
           : {}),
-        headers: {
-          'content-encoding': 'gzip',
-        },
       },
     });
     return {
@@ -111,9 +97,6 @@ const dataProvider: DataProvider = {
   },
 
   update: async (resource, params) => {
-    console.log(
-      new TextDecoder().decode(pako.gzip(JSON.stringify(params.data.content)))
-    );
     const { data } = await api.recordAction({
       resourceId: resource,
       recordId: params.id.toString(),
@@ -121,12 +104,9 @@ const dataProvider: DataProvider = {
       data: params.data.content
         ? {
             ...params.data,
-            content: pako.gzip(JSON.stringify(params.data.content)).toString(),
+            content: compress(params.data.content),
           }
         : params.data,
-      headers: {
-        'content-encoding': 'gzip',
-      },
     });
     return { data: data.record.params as any };
   },

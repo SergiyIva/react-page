@@ -1,7 +1,7 @@
 import Editor, { ValueWithLegacy } from '@react-page/editor';
 import React from 'react';
 import { cellPlugins } from '../plugins/cellPlugins';
-import pako from 'pako';
+import { decompress } from '../utils/compressor';
 
 export const getServerSideProps = async () => {
   const response = await fetch(
@@ -14,12 +14,9 @@ export const getServerSideProps = async () => {
     }
   );
   const data = await response.json();
-  const uint = new Uint8Array(
-    data.record.params.content.split(',').map(Number)
-  );
-  const str = new TextDecoder().decode(pako.ungzip(uint));
+  const content = decompress(data.record.params.content);
 
-  return { props: { content: JSON.parse(str) } };
+  return { props: { content } };
 };
 
 export default function ReadOnly({ content }: { content: ValueWithLegacy }) {
