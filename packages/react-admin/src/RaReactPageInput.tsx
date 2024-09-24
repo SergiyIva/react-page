@@ -17,7 +17,7 @@ const RaReactPageInput: React.FC<RaReactPageInputProps> = ({
   ...editorProps
 }) => {
   const {
-    input: { value, onChange },
+    field: { value, onChange },
   } = useInput({ source });
   return (
     <Labeled label={label} source={source} fullWidth>
@@ -28,7 +28,6 @@ const RaReactPageInput: React.FC<RaReactPageInputProps> = ({
             overflow: 'visible',
             padding: 16,
             marginRight: 64,
-
             ...style,
           }}
         >

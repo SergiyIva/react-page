@@ -9,9 +9,12 @@ const api = new ApiClient(API_DOMAIN, API_KEY);
 
 const dataProvider: DataProvider = {
   getList: async (resource, params) => {
-    const { field, order } = params.sort;
     const search = stringify(
-      { ...params.pagination, sortBy: field, direction: order.toLowerCase() },
+      {
+        ...params.pagination,
+        sortBy: params.sort?.field,
+        direction: params.sort?.order?.toLowerCase(),
+      },
       { addQueryPrefix: true }
     );
 

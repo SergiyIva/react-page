@@ -51,7 +51,6 @@ const RaSelectReferenceInputField: React.FC<Omit<Props, 'children'>> =
             optionText={optionText || 'id'}
             emptyValue={null}
             optionValue={optionValue || 'id'}
-            options={{ value }}
           />
         </ReferenceInput>
       );

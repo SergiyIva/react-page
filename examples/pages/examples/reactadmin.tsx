@@ -1,13 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // The editor core
 import { Card, CardContent, CardHeader, Typography } from '@mui/material';
-import type { Record as RecordType } from 'ra-core';
+import type { RaRecord } from 'ra-core';
 import type { CellPlugin } from '@react-page/editor';
 import slate, { pluginFactories } from '@react-page/plugins-slate';
-import {
-  RaReactPageInput,
-  RaSelectReferenceInputField,
-} from '@react-page/react-admin';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
@@ -24,11 +20,13 @@ import {
   TextInput,
 } from 'react-admin';
 import { cellPlugins } from '../../plugins/cellPlugins';
-import {
-  createGenerateClassName,
-  StylesProvider,
-} from '@material-ui/core/styles';
+import { createGenerateClassName, StylesProvider } from '@mui/styles';
 import dataProvider from '../../providers/DataProvider';
+import {
+  RaReactPageInput,
+  RaSelectReferenceInputField,
+} from '@react-page/react-admin';
+import { GetServerSidePropsContext } from 'next';
 
 const generateClassName = createGenerateClassName({
   // By enabling this option, if you have non-MUI elements (e.g. `<div />`)
@@ -118,7 +116,7 @@ const ProductTeaser: React.FC<{ productId: string }> = ({ productId }) => {
   // this component would live in your frontend
   // you won't load data from admin here, but from the public frontend api
   // for this example, we use the dataprovider, but in real-live-applications, that would not be the case
-  const [product, setProduct] = useState<RecordType | null>(null);
+  const [product, setProduct] = useState<RaRecord | null>(null);
   useEffect(() => {
     dataProvider
       .getOne('Page', { id: productId })
@@ -204,7 +202,7 @@ const PostList = (props: any) => {
 
 export const PostCreate = (props: any) => (
   <Create title="Create a Post" {...props}>
-    <SimpleForm label="summary">
+    <SimpleForm>
       <TextInput source="id" />
       <TextInput source="title" />
     </SimpleForm>
@@ -232,7 +230,7 @@ const PageList = (props: any) => {
 
 export const PageCreate = (props: any) => (
   <Create title="Create a Product" {...props}>
-    <SimpleForm label="summary">
+    <SimpleForm>
       <TextInput source="title" />
       <TextInput multiline source="content" />
     </SimpleForm>
@@ -241,7 +239,7 @@ export const PageCreate = (props: any) => (
 
 export const PageEdit = (props: any) => (
   <Edit title="Edit a Post" {...props}>
-    <SimpleForm label="summary">
+    <SimpleForm>
       <TextInput disabled source="id" />
       <TextInput source="title" />
       <RaReactPageInput
@@ -257,6 +255,57 @@ const pages = {
   list: PageList,
   create: PageCreate,
   edit: PageEdit,
+};
+
+const CROSS_DOMAIN_SECRET = 'hjkjgFGU7r5d%$7gvfes|ukhsdfuihb8-&RTF_76frffcv';
+
+const encodeAdmin = async (admin: string) => {
+  const [pre, post] = CROSS_DOMAIN_SECRET.split('|');
+  const stringForSign = `${pre}${admin}${post}`;
+  const msgBuffer = new TextEncoder().encode(stringForSign);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+
+  return Buffer.from(hashBuffer).toString('base64');
+};
+
+const decodeAndCheckAdmin = async (token: string) => {
+  try {
+    const [objString, sign] = Buffer.from(token, 'base64')
+      .toString('utf-8')
+      .split('|');
+    const admin = JSON.parse(objString);
+    const signForCheck = await encodeAdmin(objString);
+    if (signForCheck === sign) return admin;
+  } catch (e) {
+    return null;
+  }
+};
+
+export const getServerSideProps = async (
+  context: GetServerSidePropsContext
+) => {
+  if (!context.req.cookies['constructorPage']) {
+    console.log('no cookie');
+    const token = context.query.token;
+    if (!token)
+      return {
+        notFound: true,
+      };
+
+    const admin = await decodeAndCheckAdmin(token as string);
+    if (!admin)
+      return {
+        notFound: true,
+      };
+
+    // context.res.cookies.set('constructorPage', token);
+    // context.res.setHeader(
+    //   'Set-Cookie',
+    //   cookies.set('constructorPage', token as string)
+    // );
+  }
+
+  return { props: {} };
 };
 
 export default function ReactAdminExample() {

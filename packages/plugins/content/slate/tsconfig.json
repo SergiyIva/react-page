@@ -4,6 +4,7 @@
     "downlevelIteration": true,
     "rootDir": "src",
     "outDir": "lib",
+    "module": "esNext",
     "paths": {
       "react": ["../../../../node_modules/@types/react/index"]
     }
